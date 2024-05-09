@@ -1,113 +1,213 @@
-import Image from "next/image";
+"use client";
+
+import { EventLog } from "@/components/EventLog";
+import { EmailLog } from "@/components/EmailLog";
+import axios from "axios";
+import { useCrewJob } from "@/hooks/useCrewJob";
+import { FileState, MultiFileDropzone } from "@/components/FileUploader";
+import { useState } from "react";
+import { useEdgeStore } from '@/lib/edgestore';
 
 export default function Home() {
+  // Hooks
+  const crewJob = useCrewJob();
+  const [fileStates, setFileStates] = useState<FileState[]>([]);
+  const { edgestore } = useEdgeStore();
+  const [urls, setUrls] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isresult, setisresult] = useState(false);
+  const [uploadRes, setUploadRes] = useState<
+    {
+      url: string;
+      filename: string;
+    }[]
+  >([]);
+
+  const extractText = async (url:string) => {
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post('https://crewai-backend.vercel.app/api/extract-text', { url });
+      crewJob.setpdf_content(response.data.text);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const [errorMessage, setErrorMessage] = useState('');
+  const [url, setUrl] = useState('');
+
+
+  const handleSubmit = async () => {
+    if (!url.trim()) {
+      setErrorMessage('Please enter a valid URL');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('https://crewai-backend.vercel.app/api/extract-jd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        setErrorMessage(data.error);
+      } else {
+        crewJob.setjt(data.jt);
+        crewJob.setjd(data.jd);
+        setisresult(true);
+      }
+    } catch (error) {
+      setisresult(false);
+      console.error('Error fetching job description:', error);
+      setErrorMessage('Please enter a valid URL.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  function updateFileProgress(key: string, progress: FileState['progress']) {
+    setFileStates((fileStates) => {
+      const newFileStates = structuredClone(fileStates);
+      const fileState = newFileStates.find(
+        (fileState) => fileState.key === key,
+      );
+      if (fileState) {
+        fileState.progress = progress;
+      }
+      return newFileStates;
+    });
+  }
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="bg-white min-h-screen text-black">
+      <div className="flex">
+        <div className="w-1/2 p-4">
+          <h2 className="text-xl font-bold">Resume</h2>
+          <MultiFileDropzone
+        value={fileStates}
+        dropzoneOptions={{
+          maxFiles: 10,
+          maxSize: 1024 * 1024 * 1, // 1 MB
+        }}
+        onFilesAdded={async (addedFiles) => {
+          setFileStates([...fileStates, ...addedFiles]);
+          await Promise.all(
+            addedFiles.map(async (addedFileState) => {
+              try {
+                const res = await edgestore.myPublicFiles.upload({
+                  file: addedFileState.file,
+                  onProgressChange: async (progress) => {
+                    updateFileProgress(addedFileState.key, progress);
+                    if (progress === 100) {
+                      // wait 1 second to set it to complete
+                      // so that the user can see the progress bar
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                      updateFileProgress(addedFileState.key, 'COMPLETE');
+                    }
+                  },
+                });
+                setUploadRes((uploadRes) => [
+                  ...uploadRes,
+                  {
+                    url: res.url,
+                    filename: addedFileState.file.name,
+                  },
+                ]);
+                extractText(res.url)
+              } catch (err) {
+                updateFileProgress(addedFileState.key, 'ERROR');
+              }
+            }),
+          );
+        }
+      }
+      />
+      {uploadRes.length > 0 && (
+        <div className="mt-2">
+          {uploadRes.map((res) => (
+            <a
+              key={res.url}
+              className="mt-2 block underline"
+              href={res.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {res.filename}
+            </a>
+          ))}
+        </div>
+      )}
+        <div className="grid w-full max-w-sm items-center gap-1.5">
+        <h2 className="text-xl font-bold">JD URL</h2>
+        <div>
+          <input
+            type="text"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder="Enter Job Posting URL"
+            value={url}
+            onChange={(event) => {
+              setUrl(event.target.value);
+              setErrorMessage(''); // Clear any previous error message on input change
+            }}
+            onKeyDown={async (event) => { 
+              if (event.key === 'Enter') {
+                await handleSubmit();
+              }
+            }}
+          />
+          {isLoading && <p>Extracting job description...</p>}
+          {errorMessage && <p className="error">{errorMessage}</p>}
+          {isresult && (
+            <div>
+              <h2>You are all set</h2>
+            </div>
+          )}
+        </div>
+        </div>
+
+        </div>
+        <div className="w-1/2 p-4 flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Output</h2>
+            
+            <button
+              onClick={() => crewJob.startpdfJob()}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
+              disabled={crewJob.running}
+            >
+              {crewJob.running ? "Running..." : "Draft email"}
+            </button>
+            <button
+              onClick={() => crewJob.startJobHR()}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
+              disabled={crewJob.running}
+            >
+              {crewJob.running ? "Running..." : "Find Match"}
+            </button>
+            {crewJob.running && (
+              <button
+                onClick={() => crewJob.setRunning(false)}
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
+              >
+                Stop
+              </button>
+            )}
+
+          </div>
+          <EmailLog email={crewJob.draft} />
+          <EventLog events={crewJob.events} />
         </div>
       </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
