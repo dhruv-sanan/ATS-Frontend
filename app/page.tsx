@@ -27,7 +27,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('https://crewai-backend.vercel.app/api/extract-text', { url });
+      const response = await axios.post('http://localhost:3001/api/extract-text', { url });
       crewJob.setpdf_content(response.data.text);
     } catch (err) {
       console.error(err);
@@ -48,7 +48,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://crewai-backend.vercel.app/api/extract-jd', {
+      const response = await fetch('http://localhost:3001/api/extract-jd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

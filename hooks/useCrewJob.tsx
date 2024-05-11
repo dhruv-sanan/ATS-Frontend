@@ -24,55 +24,6 @@ export const useCrewJob = () => {
   // const [emaildraftList, setemaildraftList] = useState<EmailDraftInfo[]>([]);
   const [currentJobId, setCurrentJobId] = useState<string>("");
 
-  // useEffects
-  useEffect(() => {
-    let intervalId: number;
-    console.log("currentJobId", currentJobId);
-    const fetchJobStatuspdf = async () => {
-      try {
-        console.log("calling fetchJobStatus");
-        const response = await axios.get<{
-          status: string;
-          result: string[];
-          events: EventType[];
-        }>(`https://crewai-backend.vercel.app/api/crew/${currentJobId}`);
-        const { status, events: fetchedEvents, result } = response.data;
-
-        console.log("status update", response.data);
-
-        setEvents(fetchedEvents);
-        if (result) {
-          console.log("setting job result", result);
-          setdraft(result || []);
-        }
-
-        if (status === "COMPLETE" || status === "ERROR") {
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-          setRunning(false);
-          toast.success(`Job ${status.toLowerCase()}.`);
-        }
-      } catch (error) {
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
-        setRunning(false);
-        toast.error("Failed to get job status.");
-        console.error(error);
-      }
-    };
-
-    if (currentJobId !== "") {
-      intervalId = setInterval(fetchJobStatuspdf, 1000) as unknown as number;
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [currentJobId]);
 
   const startpdfJob = async () => {
     // Clear previous job data
@@ -82,7 +33,7 @@ export const useCrewJob = () => {
 
     try {
       const response = await axios.post<{ job_id: string }>(
-        "https://crewai-backend.vercel.app/api/crewpdf",
+        "http://localhost:3001/api/crewpdf",
         {
           jt,
           jd,
@@ -108,7 +59,7 @@ export const useCrewJob = () => {
 
     try {
       const response = await axios.post<{ job_id: string }>(
-        "https://crewai-backend.vercel.app/api/crewHR",
+        "http://localhost:3001/api/crewHR",
         {
           jt,
           jd,
