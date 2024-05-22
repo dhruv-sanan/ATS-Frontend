@@ -9,19 +9,19 @@ export type EventType = {
   timestamp: string;
 };
 
-export type EmailInfo = {
-  subject: string;
-  content: string;
+export type ScoreInfo = {
+  score: number;
+  explanation: string;
 };
 
-export const useEmailJob = () => {
+export const useScoreJob = () => {
   // State
   const [running, setRunning] = useState<boolean>(false);
   const [pdf_content, setpdf_content] = useState<string[]>([]);
   const [jt, setjt] = useState<string[]>([]);
   const [jd, setjd] = useState<string[]>([]);
   const [events, setEvents] = useState<EventType[]>([]);
-  const [draftemail, setdraftemail] = useState<EmailInfo>();
+  const [score, setscore] = useState<ScoreInfo>();
   const [currentJobId, setCurrentJobId] = useState<string>("");
 
   // useEffects
@@ -44,11 +44,11 @@ export const useEmailJob = () => {
         if (result) {
           console.log("setting job result", result);
           const parsedResult = JSON.parse(result);
-          const emailInfo: EmailInfo = {
-            subject: parsedResult.subject,
-            content: parsedResult.content,
+          const scoreInfo: ScoreInfo = {
+            score: parsedResult.score,
+            explanation: parsedResult.explanation,
           };
-          setdraftemail(emailInfo); // Set array with single EmailInfo object
+          setscore(scoreInfo); // Set array with single EmailInfo object
         }
 
         if (status === "COMPLETE" || status === "ERROR") {
@@ -79,15 +79,15 @@ export const useEmailJob = () => {
     };
   }, [currentJobId]);
 
-  const startEmailJob = async () => {
+  const startScoreJob = async () => {
     // Clear previous job data
     setEvents([]);
-    setdraftemail({} as EmailInfo);
+    setscore({} as ScoreInfo);
     setRunning(true);
 
     try {
       const response = await axios.post<{ job_id: string }>(
-        "http://localhost:3001/api/crewEmail",
+        "http://localhost:3001/api/crewScore",
         {
           jt,
           jd,
@@ -113,10 +113,10 @@ export const useEmailJob = () => {
     setEvents,
     currentJobId,
     setCurrentJobId,
-    startEmailJob,
+    startScoreJob,
     jd, setjd,
     jt, setjt,
     pdf_content, setpdf_content,
-    draftemail, setdraftemail
+    score, setscore
   };
 };

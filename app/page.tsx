@@ -1,21 +1,23 @@
 "use client";
 
 import { EventLog } from "@/components/EventLog";
-import { EmailLog } from "@/components/EmailLog";
+import { Score } from "@/components/Score";
 import axios from "axios";
-import { useCrewJob } from "@/hooks/useCrewJob";
+import { useEmailJob } from "@/hooks/useCrewJob";
 import { FileState, MultiFileDropzone } from "@/components/FileUploader";
 import { useState } from "react";
 import { useEdgeStore } from '@/lib/edgestore';
+import { Email } from "@/components/Email";
+import { useScoreJob } from "@/hooks/useScoreJob";
+import { ScoreEventLog } from "@/components/ScoreEventLog";
+import toast from "react-hot-toast";
 
 export default function Home() {
   // Hooks
-  const crewJob = useCrewJob();
+  const crewscore= useScoreJob();
+  const crewJob = useEmailJob();
   const [fileStates, setFileStates] = useState<FileState[]>([]);
   const { edgestore } = useEdgeStore();
-  const [urls, setUrls] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isresult, setisresult] = useState(false);
   const [uploadRes, setUploadRes] = useState<
     {
       url: string;
@@ -24,16 +26,14 @@ export default function Home() {
   >([]);
 
   const extractText = async (url:string) => {
-    setIsLoading(true);
 
     try {
       const response = await axios.post('http://localhost:3001/api/extract-text', { url });
       crewJob.setpdf_content(response.data.text);
+      crewscore.setpdf_content(response.data.text);
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    } 
   };
   const [errorMessage, setErrorMessage] = useState('');
   const [url, setUrl] = useState('');
@@ -41,11 +41,11 @@ export default function Home() {
 
   const handleSubmit = async () => {
     if (!url.trim()) {
-      setErrorMessage('Please enter a valid URL');
+      toast.error("Please enter a valid URL");
       return;
     }
+    const load = toast.loading("Extracting job description...")
 
-    setIsLoading(true);
 
     try {
       const response = await fetch('http://localhost:3001/api/extract-jd', {
@@ -65,14 +65,15 @@ export default function Home() {
       } else {
         crewJob.setjt(data.jt);
         crewJob.setjd(data.jd);
-        setisresult(true);
+        crewscore.setjt(data.jt);
+        crewscore.setjd(data.jd);
       }
     } catch (error) {
-      setisresult(false);
       console.error('Error fetching job description:', error);
-      setErrorMessage('Please enter a valid URL.');
+      toast.error("Please enter a valid URL");
     } finally {
-      setIsLoading(false);
+      toast.dismiss(load)
+      toast.success("You are all set");
     }
   };
   
@@ -89,33 +90,33 @@ export default function Home() {
     });
   }
   return (
-    <div className="bg-white min-h-screen text-black">
-      <div className="flex">
-        <div className="w-1/2 p-4">
-          <h2 className="text-xl font-bold">Resume</h2>
+    <div className="flex h-full min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="w-1/2 p-4 items-center justify-center">
+          <h2 className="text-xl mb-2 font-bold">Resume</h2>
           <MultiFileDropzone
-        value={fileStates}
-        dropzoneOptions={{
-          maxFiles: 10,
-          maxSize: 1024 * 1024 * 1, // 1 MB
-        }}
-        onFilesAdded={async (addedFiles) => {
-          setFileStates([...fileStates, ...addedFiles]);
-          await Promise.all(
-            addedFiles.map(async (addedFileState) => {
-              try {
-                const res = await edgestore.myPublicFiles.upload({
-                  file: addedFileState.file,
-                  onProgressChange: async (progress) => {
-                    updateFileProgress(addedFileState.key, progress);
-                    if (progress === 100) {
-                      // wait 1 second to set it to complete
-                      // so that the user can see the progress bar
-                      await new Promise((resolve) => setTimeout(resolve, 1000));
-                      updateFileProgress(addedFileState.key, 'COMPLETE');
-                    }
-                  },
-                });
+            value={fileStates}
+            dropzoneOptions={{
+              maxFiles: 10,
+              maxSize: 1024 * 1024 * 1, // 1 MB
+            }}
+            onFilesAdded={async (addedFiles) => {
+              setFileStates([...fileStates, ...addedFiles]);
+              await Promise.all(
+                addedFiles.map(async (addedFileState) => {
+                  try {
+                    const load = toast.loading("Extracting resume information...")
+                    const res = await edgestore.myPublicFiles.upload({
+                      file: addedFileState.file,
+                      onProgressChange: async (progress) => {
+                        updateFileProgress(addedFileState.key, progress);
+                        if (progress === 100) {
+                          // wait 1 second to set it to complete
+                          // so that the user can see the progress bar
+                          await new Promise((resolve) => setTimeout(resolve, 1000));
+                          updateFileProgress(addedFileState.key, 'COMPLETE');
+                        }
+                      },
+                    });
                 setUploadRes((uploadRes) => [
                   ...uploadRes,
                   {
@@ -124,6 +125,8 @@ export default function Home() {
                   },
                 ]);
                 extractText(res.url)
+                toast.dismiss(load)
+                toast.success("You are all set");
               } catch (err) {
                 updateFileProgress(addedFileState.key, 'ERROR');
               }
@@ -148,8 +151,9 @@ export default function Home() {
         </div>
       )}
         <div className="grid w-full max-w-sm items-center gap-1.5">
-        <h2 className="text-xl font-bold">JD URL</h2>
+        <h2 className="text-xl mt-2 mb-2 font-bold">JD URL</h2>
         <div>
+        
           <input
             type="text"
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -165,13 +169,7 @@ export default function Home() {
               }
             }}
           />
-          {isLoading && <p>Extracting job description...</p>}
           {errorMessage && <p className="error">{errorMessage}</p>}
-          {isresult && (
-            <div>
-              <h2>You are all set</h2>
-            </div>
-          )}
         </div>
         </div>
 
@@ -179,24 +177,23 @@ export default function Home() {
         <div className="w-1/2 p-4 flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Output</h2>
-            
             <button
-              onClick={() => crewJob.startpdfJob()}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
+              onClick={() => crewscore.startScoreJob()}
+              className="my-element text-white font-bold py-2 px-4 rounded text-sm"
+              disabled={crewscore.running}
+            >
+              {crewscore.running ? "Running..." : "Find Match"}
+            </button>
+            <button
+              onClick={() => crewJob.startEmailJob()}
+              className="my-element text-white font-bold py-2 px-4 rounded text-sm"
               disabled={crewJob.running}
             >
               {crewJob.running ? "Running..." : "Draft email"}
             </button>
-            <button
-              onClick={() => crewJob.startJobHR()}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
-              disabled={crewJob.running}
-            >
-              {crewJob.running ? "Running..." : "Find Match"}
-            </button>
-            {crewJob.running && (
+            {crewJob.running || crewscore.running && (
               <button
-                onClick={() => crewJob.setRunning(false)}
+                onClick={() => {crewJob.setRunning(false),crewscore.setRunning(false)} }
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
               >
                 Stop
@@ -204,10 +201,11 @@ export default function Home() {
             )}
 
           </div>
-          <EmailLog email={crewJob.draft} />
+          {crewJob.draftemail && <Email draftemail={crewJob.draftemail} />}
+          <Score scoreinfo={crewscore.score} />
           <EventLog events={crewJob.events} />
+          <ScoreEventLog events={crewscore.events} />
         </div>
       </div>
-    </div>
   );
 }
