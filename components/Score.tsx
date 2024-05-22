@@ -21,11 +21,11 @@ export const Score: React.FC<FinalOutputProps> = ({ scoreinfo }) => {
       }
     }
   }, [scoreinfo]);
-  useEffect(() => {
-    if (scored > 7) {
-      crewJob.startEmailJob();
-    }
-  }, []); 
+  // useEffect(() => {
+  //   if (scored > 7) {
+  //     crewJob.startEmailJob();
+  //   }
+  // }, []); 
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-semibold mb-2">Score</h2>
