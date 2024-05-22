@@ -10,7 +10,7 @@ import axios from "axios";
 // This component will receive props to update events.
 
 interface FinalOutputProps {
-  draftemail?: EmailInfo;
+  draftemail: EmailInfo;
 }
 // const formSchema = z.object ({
 //   title: z.string()
@@ -24,8 +24,8 @@ interface FinalOutputProps {
 // })
 export const Email: React.FC<FinalOutputProps> = ({ draftemail }) => {
   const crewJob = useEmailJob();
-  let [subject, setsubject] = useState(draftemail.subject || '');
-  let [content, setcontent] = useState(draftemail.content);
+  let [subject, setsubject] = useState(draftemail?.subject || '');
+  let [content, setcontent] = useState(draftemail?.content);
   const [emailid, setEmailid] = useState(String);
   useEffect(() => {
     if (draftemail) {

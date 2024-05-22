@@ -201,10 +201,10 @@ export default function Home() {
             )}
 
           </div>
-          {crewJob.draftemail && <Email draftemail={crewJob.draftemail} />}
           <Score scoreinfo={crewscore.score} />
-          <EventLog events={crewJob.events} />
-          <ScoreEventLog events={crewscore.events} />
+          {crewJob.draftemail && <Email draftemail={crewJob.draftemail} />}
+          {crewscore.events && <ScoreEventLog events={crewscore.events} />}
+          {crewJob.events && <EventLog events={crewJob.events} />}
         </div>
       </div>
   );
