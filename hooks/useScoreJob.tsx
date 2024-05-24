@@ -3,6 +3,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useEmailJob } from "@/hooks/useCrewJob";
 
 export type EventType = {
   data: string;
@@ -16,6 +17,7 @@ export type ScoreInfo = {
 
 export const useScoreJob = () => {
   // State
+  const crewJob = useEmailJob();
   const [running, setRunning] = useState<boolean>(false);
   const [pdf_content, setpdf_content] = useState<string[]>([]);
   const [jt, setjt] = useState<string[]>([]);
@@ -49,6 +51,9 @@ export const useScoreJob = () => {
             explanation: parsedResult.explanation,
           };
           setscore(scoreInfo); // Set array with single EmailInfo object
+          // if (parsedResult.score > 7) {
+          //   crewJob.startEmailJob();
+          // }
         }
 
         if (status === "COMPLETE" || status === "ERROR") {

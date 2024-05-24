@@ -27,7 +27,7 @@ export const Score: React.FC<FinalOutputProps> = ({ scoreinfo }) => {
   //   }
   // }, []); 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-auto min-h-40 ">
       <h2 className="text-lg font-semibold mb-2">Score</h2>
       <div className="flex-grow overflow-auto border-2 border-gray-300 p-2">
         {scoreinfo === undefined ? (

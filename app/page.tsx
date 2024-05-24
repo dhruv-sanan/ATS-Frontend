@@ -150,13 +150,12 @@ export default function Home() {
           ))}
         </div>
       )}
-        <div className="grid w-full max-w-sm items-center gap-1.5">
-        <h2 className="text-xl mt-2 mb-2 font-bold">JD URL</h2>
-        <div>
+        <div className="grid w-full items-center gap-1.5">
+        <h2 className="text-xl w-full mt-2 mb-2 font-bold">JD URL</h2>
         
           <input
             type="text"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="Enter Job Posting URL"
             value={url}
             onChange={(event) => {
@@ -171,8 +170,6 @@ export default function Home() {
           />
           {errorMessage && <p className="error">{errorMessage}</p>}
         </div>
-        </div>
-
         </div>
         <div className="w-1/2 p-4 flex flex-col">
           <div className="flex justify-between items-center mb-4">
@@ -203,8 +200,8 @@ export default function Home() {
           </div>
           <Score scoreinfo={crewscore.score} />
           {crewJob.draftemail && <Email draftemail={crewJob.draftemail} />}
-          {crewscore.events && <ScoreEventLog events={crewscore.events} />}
-          {crewJob.events && <EventLog events={crewJob.events} />}
+          {crewscore.events.length !== 0 && <ScoreEventLog events={crewscore.events} />}
+          {crewJob.events.length !== 0 && <EventLog events={crewJob.events} />}
         </div>
       </div>
   );
