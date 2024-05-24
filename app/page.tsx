@@ -28,7 +28,7 @@ export default function Home() {
   const extractText = async (url:string) => {
 
     try {
-      const response = await axios.post('http://localhost:3001/api/extract-text', { url });
+      const response = await axios.post('http://127.0.0.1:3001/api/extract-text', { url });
       crewJob.setpdf_content(response.data.text);
       crewscore.setpdf_content(response.data.text);
     } catch (err) {
@@ -48,7 +48,7 @@ export default function Home() {
 
 
     try {
-      const response = await fetch('http://localhost:3001/api/extract-jd', {
+      const response = await fetch('http://127.0.0.1:3001/api/extract-jd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

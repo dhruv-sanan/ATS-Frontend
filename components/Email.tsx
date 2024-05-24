@@ -41,7 +41,7 @@ export const Email: React.FC<FinalOutputProps> = ({ draftemail }) => {
   const sendEmailJob = async () => {
     try {
       const response = await axios.post<{ email: string }>(
-        "http://localhost:3001/api/sendemail",
+        "http://127.0.0.1:3001/api/sendemail",
         {
           subject,
           content,

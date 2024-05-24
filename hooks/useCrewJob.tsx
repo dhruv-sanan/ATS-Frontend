@@ -35,7 +35,7 @@ export const useEmailJob = () => {
           status: string;
           result: string; 
           events: EventType[];
-        }>(`http://localhost:3001/api/crew/${currentJobId}`);
+        }>(`http://127.0.0.1:3001/api/crew/${currentJobId}`);
         const { status, events: fetchedEvents, result } = response.data;
 
         console.log("status update", response.data);
@@ -87,7 +87,7 @@ export const useEmailJob = () => {
 
     try {
       const response = await axios.post<{ job_id: string }>(
-        "http://localhost:3001/api/crewEmail",
+        "http://127.0.0.1:3001/api/crewEmail",
         {
           jt,
           jd,
